@@ -67,7 +67,7 @@ class SocialForce:
         self.update_destinations()
 
 
-    def init_pedestrians(self, positions: npt.ArrayLike, destinations, velocities=0., destinations_range=None):
+    def init_pedestrians(self, positions: npt.ArrayLike, destinations, velocities: npt.ArrayLike | float =0., destinations_range=None):
         """Set positions and velocities of pedestrians
         
         Parameters
@@ -294,11 +294,16 @@ class SocialForce:
             assert_shape(desired_directions, (self.n_pedestrians,2))
         return np.zeros_like(desired_directions)
 
-    def total_force(self, positions, destinations, radii, desired_speeds, velocities):
+    def calc_desired_directions(self, positions, destinations):
         desired_directions = destinations - positions
         desired_directions_norm = np.linalg.norm(desired_directions, axis=1, keepdims=True)
         desired_directions = np.divide(desired_directions, desired_directions_norm,
-                                       out=np.zeros_like(desired_directions), where=(desired_directions_norm!=0))
+                                       out=np.zeros_like(desired_directions),
+                                       where=(desired_directions_norm!=0))
+        return desired_directions
+
+    def total_force(self, positions, destinations, radii, desired_speeds, velocities):
+        desired_directions = self.calc_desired_directions(positions, destinations)
         total_force = self.driving_force(velocities, desired_directions, desired_speeds) \
                     + self.repulsive_force(positions, radii, velocities) \
                     + self.boundary_force(positions) \
