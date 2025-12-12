@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 from scipy.integrate import RK45
-#from numba import njit
+from numba import njit, prange
 
 def assert_shape(arr, expected):
     assert arr.shape == expected, f"shape {arr.shape}, expected {expected}"
@@ -146,7 +146,7 @@ class SocialForce:
             assert_shape(cos_phi, (self.n_pedestrians, self.n_pedestrians, 1))
         return self.anisotropic_character + (1.-self.anisotropic_character)*(1.+cos_phi) / 2.
 
-    def repulsive_force(self, positions, radii, velocities):
+    def repulsive_force_numpy(self, positions, radii, velocities):
         if __debug__:
             assert_shape(positions, (self.n_pedestrians, 2))
             assert_shape(radii, (self.n_pedestrians, 1))
@@ -181,6 +181,43 @@ class SocialForce:
 
 
         return np.sum(repulsive_force_mat, axis=1)
+
+    @staticmethod
+    @njit(parallel=True)
+    def repulsive_force_njit(positions, radii, velocities, anisotropic_character, Verlet_sphere, A1, B1, A2, B2):
+        n_pedestrians = positions.shape[0]
+        repulsive_force_mat = np.zeros((n_pedestrians, n_pedestrians,2))
+        unit_vectors = np.zeros_like(repulsive_force_mat)
+        unit_velocities = np.zeros_like(positions)
+        for i in prange(n_pedestrians):
+            speeds = np.linalg.norm(velocities[i])
+            if speeds != 0.:
+                unit_velocities[i] = velocities[i] / speeds
+            for j in prange(n_pedestrians):
+                if i==j: continue
+                relative_positions = positions[i] - positions[j]
+                distance = np.linalg.norm(relative_positions)
+                if distance > Verlet_sphere:
+                    continue
+
+                radii_sum = radii[i,0] + radii[j,0]
+                if distance != 0:
+                    unit_vectors[i,j] = relative_positions / distance
+                cos_phi = -np.sum(unit_vectors[i,j] * unit_velocities[i])
+                fov = anisotropic_character + (1.-anisotropic_character) * (1+cos_phi)/2.
+
+                repulsive_force_mat[i,j] = A1 * np.exp( (radii_sum - distance)/B1) * unit_vectors[i,j] * fov \
+                                   + A2 * np.exp( (radii_sum - distance)/B2 ) * unit_vectors[i,j]
+
+        return np.sum(repulsive_force_mat, axis=1)
+
+    def repulsive_force(self, positions, radii, velocities):
+        if self.n_pedestrians > 250:
+            return self.repulsive_force_njit(positions, radii, velocities,
+                                             self.anisotropic_character, self.Verlet_sphere,
+                                             self.A1, self.B1, self.A2, self.B2)
+        return self.repulsive_force_numpy(positions, radii, velocities)
+ 
     
     def boundary_force(self, positions: npt.NDArray):
         if __debug__:
