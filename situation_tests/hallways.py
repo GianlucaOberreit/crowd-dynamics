@@ -20,18 +20,15 @@ p0[:,1] = SF.rng.uniform(-2.7,2.7,size=n_pedestrians)
 
 ### velocities ###
 v0 = np.zeros_like(p0)
-#v0[:n_pedestrians,0] = 1.34
-#v0[n_pedestrians:,0] = -1.34
+v0[:n_pedestrians,0] = 1.34
+v0[n_pedestrians:,0] = -1.34
 
 ### Destinations ###
-destinations = np.zeros((n_pedestrians,2,2))
-destinations[:n_pedestrians//2,0,0] = 1
-destinations[n_pedestrians//2:,0,0] = -1
-destinations[:n_pedestrians//2,1,0] = 100000
-destinations[n_pedestrians//2:,1,0] = -100000
-destinations_range = np.ones((n_pedestrians,2,1))
+destinations = np.zeros((n_pedestrians,1,2))
+destinations[:n_pedestrians//2,0,0] = 100000
+destinations[n_pedestrians//2:,0,0] = -100000
 
-SF.init_pedestrians(p0, destinations, velocities=v0, destinations_range=destinations_range)
+SF.init_pedestrians(p0, destinations, velocities=v0)
 
 
 ##############
@@ -40,8 +37,6 @@ SF.init_pedestrians(p0, destinations, velocities=v0, destinations_range=destinat
 boundaries = np.array([
     [[-150,3], [150,3]],
     [[-150, -3], [150,-3]],
-    [[0,3],[0,1]],
-    [[0,-3],[0,-1]]
 ])
 SF.Ab = 10 # Make boundary repulsion higher to avoid clipping through walls
 SF.set_boundaries(boundaries)
@@ -58,5 +53,5 @@ positions = results["positions"]
 ################
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
 colors = np.array(['blue']*(n_pedestrians//2) + ['red']*(n_pedestrians - n_pedestrians//2))
-postprocessing.movie.make_movie(times, positions, SF, regularised_timesteps=regularised_timesteps, colors=colors, title="2 Directional Pedestrian Flow in a Doorway")
+postprocessing.movie.make_movie(times, positions, SF, regularised_timesteps=regularised_timesteps, colors=colors, title="Line Formation in a Hallway")
 
