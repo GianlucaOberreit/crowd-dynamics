@@ -3,8 +3,10 @@ import numpy.typing as npt
 from scipy.integrate import RK45
 from numba import njit, prange
 
+
 def assert_shape(arr, expected):
     assert arr.shape == expected, f"shape {arr.shape}, expected {expected}"
+
 
 class SocialForce:
     """
@@ -51,7 +53,8 @@ class SocialForce:
     - `repulsive_force` uses a cutoff distance `Verlet_sphere` (metres) in the
       Numba implementation and a hard-coded cutoff of 10 m in the NumPy path.
     """
-    def __init__(self, n_pedestrians: int, rng_seed: int=42):
+
+    def __init__(self, n_pedestrians: int, rng_seed: int = 42):
         """
         Initialise model parameters and allocate state arrays.
 
@@ -69,41 +72,56 @@ class SocialForce:
         """
         self.n_pedestrians: int = n_pedestrians
 
-        self.t: float = 0.
+        self.t: float = 0.0
 
-        self.destinations: npt.NDArray = np.empty((n_pedestrians,1,2), dtype=float)
-        self.destinations_range: npt.NDArray = np.zeros((n_pedestrians,1), dtype=float)
+        self.destinations: npt.NDArray = np.empty((n_pedestrians, 1, 2), dtype=float)
+        self.destinations_range: npt.NDArray = np.zeros((n_pedestrians, 1), dtype=float)
         self.destinations_indices: npt.NDArray = np.zeros((n_pedestrians,), dtype=int)
-        self.desired_speeds: npt.NDArray = np.empty((n_pedestrians,1))
+        self.desired_speeds: npt.NDArray = np.empty((n_pedestrians, 1))
         self.desired_speeds0: npt.NDArray = np.ones_like(self.desired_speeds) * 1.34
-        self.maximal_speeds: npt.NDArray = self.desired_speeds0.copy()*1.3
+        self.maximal_speeds: npt.NDArray = self.desired_speeds0.copy() * 1.3
 
         self.anisotropic_character: float = 0.75
         self.relaxation_times: float = 0.5
-        self.radii: npt.NDArray[np.float64] = np.ones((n_pedestrians, 1), dtype=float) * 0.3
-        self.A1 : float = 0.
-        self.A2 : float = 2. 
-        self.B1 : float = 0.3
-        self.B2 : float = 0.2
-        self.Verlet_sphere : float = 10.
+        self.radii: npt.NDArray[np.float64] = (
+            np.ones((n_pedestrians, 1), dtype=float) * 0.3
+        )
+        self.A1: float = 0.0
+        self.A2: float = 2.0
+        self.B1: float = 0.3
+        self.B2: float = 0.2
+        self.Verlet_sphere: float = 10.0
 
-        self.positions : npt.NDArray[np.float64] = np.zeros((n_pedestrians,2), dtype=float)
-        self.positions0 : npt.NDArray[np.float64] = np.empty_like(self.positions)
-        self.velocities : npt.NDArray[np.float64] = np.empty_like(self.positions)
-        self.velocities0 : npt.NDArray[np.float64] = np.empty_like(self.positions)
+        self.positions: npt.NDArray[np.float64] = np.zeros(
+            (n_pedestrians, 2), dtype=float
+        )
+        self.positions0: npt.NDArray[np.float64] = np.empty_like(self.positions)
+        self.velocities: npt.NDArray[np.float64] = np.empty_like(self.positions)
+        self.velocities0: npt.NDArray[np.float64] = np.empty_like(self.positions)
 
         self.boundaries: npt.NDArray | None = None
-        self.Ab : float = 5.
-        self.Bb : float = 0.1
-        self.boundary_verlet_sphere : float = 1.
-        self.boundary_selection : str = "nearest"
+        self.Ab: float = 5.0
+        self.Bb: float = 0.1
+        self.boundary_verlet_sphere: float = 1.0
+        self.boundary_selection: str = "nearest"
 
         self.rng = np.random.default_rng(rng_seed)
 
-        self.results : dict ={}
-        self.forces : dict = {"total": None, "repulsive": None, "driving": None, "boundary": None}
+        self.results: dict = {}
+        self.forces: dict = {
+            "total": None,
+            "repulsive": None,
+            "driving": None,
+            "boundary": None,
+        }
 
-    def init_solver(self, t_bound : float, rtol : float =1e-3, atol : float =1e-4, max_step : float | None =None):
+    def init_solver(
+        self,
+        t_bound: float,
+        rtol: float = 1e-3,
+        atol: float = 1e-4,
+        max_step: float | None = None,
+    ):
         """
         Initialise the ODE integrator for the current initial state.
 
@@ -129,22 +147,25 @@ class SocialForce:
         - dpositions/dt = velocities
         - dvelocities/dt = total_force(...)
         """
-        y0 = np.concatenate((self.positions0.flatten(),
-                            self.velocities0.flatten()))
+        y0 = np.concatenate((self.positions0.flatten(), self.velocities0.flatten()))
 
         def step(t, y):
-            positions = y[:2*self.n_pedestrians].reshape(self.positions.shape)
-            velocities = y[2*self.n_pedestrians:4*self.n_pedestrians].reshape(self.velocities.shape)
+            positions = y[: 2 * self.n_pedestrians].reshape(self.positions.shape)
+            velocities = y[2 * self.n_pedestrians : 4 * self.n_pedestrians].reshape(
+                self.velocities.shape
+            )
 
             desired_speeds = self.calc_desired_speeds(t, positions)
             dpositions = velocities
             dvelocities = self.total_force(positions, desired_speeds, velocities)
-            return np.concatenate((dpositions.flatten(),
-                                  dvelocities.flatten()))
+            return np.concatenate((dpositions.flatten(), dvelocities.flatten()))
+
         if max_step:
-            self.solver = RK45(step, 0., y0, t_bound, rtol=rtol, atol=atol, max_step=max_step)
+            self.solver = RK45(
+                step, 0.0, y0, t_bound, rtol=rtol, atol=atol, max_step=max_step
+            )
         else:
-            self.solver = RK45(step, 0., y0, t_bound, rtol=rtol, atol=atol)
+            self.solver = RK45(step, 0.0, y0, t_bound, rtol=rtol, atol=atol)
 
     def step(self):
         """
@@ -167,8 +188,10 @@ class SocialForce:
         self.solver.step()
         y = self.solver.y
         self.t = self.solver.t
-        self.positions = y[:2*self.n_pedestrians].reshape(self.positions.shape)
-        self.velocities = y[2*self.n_pedestrians:4*self.n_pedestrians].reshape(self.velocities.shape)
+        self.positions = y[: 2 * self.n_pedestrians].reshape(self.positions.shape)
+        self.velocities = y[2 * self.n_pedestrians : 4 * self.n_pedestrians].reshape(
+            self.velocities.shape
+        )
         self.desired_speeds = self.calc_desired_speeds(self.t, self.positions)
         self.update_destinations()
 
@@ -179,9 +202,13 @@ class SocialForce:
         self.results = {key: [] for key in to_save}
         times = []
 
-        i = 0 
-        while self.t < t_bound and self.solver.status == 'running':
-            if print_freq is not None and print_freq is not False and i%print_freq == 0:
+        i = 0
+        while self.t < t_bound and self.solver.status == "running":
+            if (
+                print_freq is not None
+                and print_freq is not False
+                and i % print_freq == 0
+            ):
                 print(i)
             self.step()
             if "positions" in to_save:
@@ -191,7 +218,9 @@ class SocialForce:
             if "desired_speeds" in to_save:
                 self.results["desired_speeds"].append(self.desired_speeds.copy())
             if "desired_directions" in to_save:
-                self.results["desired_directions"].append(self.calc_desired_directions())
+                self.results["desired_directions"].append(
+                    self.calc_desired_directions()
+                )
             if "total_forces" in to_save:
                 self.results["total_forces"].append(self.forces["total"])
             if "repulsive_forces" in to_save:
@@ -202,11 +231,17 @@ class SocialForce:
                 self.results["boundary_forces"].append(self.forces["boundary"])
 
             times.append(self.t)
-            i+=1
+            i += 1
 
         return times, self.results
 
-    def init_pedestrians(self, positions: npt.NDArray, destinations, velocities: npt.ArrayLike | float =0., destinations_range=None):
+    def init_pedestrians(
+        self,
+        positions: npt.NDArray,
+        destinations,
+        velocities: npt.ArrayLike | float = 0.0,
+        destinations_range=None,
+    ):
         """
         Set initial positions, velocities, and destinations.
 
@@ -251,8 +286,12 @@ class SocialForce:
         else:
             self.destinations_range = np.zeros(destinations.shape[:2] + (1,))
 
-    def set_boundaries(self, boundaries: npt.NDArray, boundary_selection="nearest",
-                       boundary_verlet_sphere=1.):
+    def set_boundaries(
+        self,
+        boundaries: npt.NDArray,
+        boundary_selection="nearest",
+        boundary_verlet_sphere=1.0,
+    ):
         """
         Set line-segment boundaries (walls).
 
@@ -304,7 +343,11 @@ class SocialForce:
         where `tau = relaxation_times`, `v_i^{*}` is `desired_speeds[i]`, and
         `hat{e}_i` is `desired_directions[i]`.
         """
-        force = 1/self.relaxation_times * (desired_speeds * desired_directions - velocities)
+        force = (
+            1
+            / self.relaxation_times
+            * (desired_speeds * desired_directions - velocities)
+        )
         if "driving_forces" in self.results.keys():
             self.forces["driving"] = force
         return force
@@ -337,9 +380,16 @@ class SocialForce:
         `anisotropic_character` and 1.
         """
         speeds = np.linalg.norm(velocities, axis=1, keepdims=True)
-        unit_velocities = np.divide(velocities, speeds, out=np.zeros_like(velocities), where=(speeds!=0))
-        cos_phi = -np.sum(unit_vectors * unit_velocities[:, None, :], axis=2, keepdims = True)
-        return self.anisotropic_character + (1.-self.anisotropic_character)*(1.+cos_phi) / 2.
+        unit_velocities = np.divide(
+            velocities, speeds, out=np.zeros_like(velocities), where=(speeds != 0)
+        )
+        cos_phi = -np.sum(
+            unit_vectors * unit_velocities[:, None, :], axis=2, keepdims=True
+        )
+        return (
+            self.anisotropic_character
+            + (1.0 - self.anisotropic_character) * (1.0 + cos_phi) / 2.0
+        )
 
     def repulsive_force_numpy(self, positions, radii, velocities):
         """
@@ -373,19 +423,39 @@ class SocialForce:
         radii_sum = radii[:, None, :] + radii[None, :, :]
         relative_positions = positions[:, None, :] - positions[None, :, :]
         distances = np.linalg.norm(relative_positions, axis=2, keepdims=True)
-        unit_vectors = np.divide(relative_positions, distances,
-                                 out=np.zeros_like(relative_positions), where=(distances!=0))
+        unit_vectors = np.divide(
+            relative_positions,
+            distances,
+            out=np.zeros_like(relative_positions),
+            where=(distances != 0),
+        )
         fov = self.calc_fovs(velocities, unit_vectors)
 
-        repulsive_force_mat = self.A1 * np.exp( (radii_sum - distances)/self.B1) * unit_vectors * fov \
-                            + self.A2 * np.exp( (radii_sum - distances)/self.B2 ) * unit_vectors
-        repulsive_force_mat = np.where(distances <= self.Verlet_sphere, repulsive_force_mat, np.zeros_like(repulsive_force_mat))
+        repulsive_force_mat = (
+            self.A1 * np.exp((radii_sum - distances) / self.B1) * unit_vectors * fov
+            + self.A2 * np.exp((radii_sum - distances) / self.B2) * unit_vectors
+        )
+        repulsive_force_mat = np.where(
+            distances <= self.Verlet_sphere,
+            repulsive_force_mat,
+            np.zeros_like(repulsive_force_mat),
+        )
 
         return np.sum(repulsive_force_mat, axis=1)
 
     @staticmethod
     @njit(parallel=True)
-    def repulsive_force_njit(positions, radii, velocities, anisotropic_character, Verlet_sphere, A1, B1, A2, B2):
+    def repulsive_force_njit(
+        positions,
+        radii,
+        velocities,
+        anisotropic_character,
+        Verlet_sphere,
+        A1,
+        B1,
+        A2,
+        B2,
+    ):
         """
         Compute pairwise repulsive acceleration using Numba.
 
@@ -415,28 +485,34 @@ class SocialForce:
         arrays; memory use is O(N^2).
         """
         n_pedestrians = positions.shape[0]
-        repulsive_force_mat = np.zeros((n_pedestrians, n_pedestrians,2))
+        repulsive_force_mat = np.zeros((n_pedestrians, n_pedestrians, 2))
         unit_vectors = np.zeros_like(repulsive_force_mat)
         unit_velocities = np.zeros_like(positions)
         for i in prange(n_pedestrians):
             speeds = np.linalg.norm(velocities[i])
-            if speeds != 0.:
+            if speeds != 0.0:
                 unit_velocities[i] = velocities[i] / speeds
             for j in prange(n_pedestrians):
-                if i==j: continue
+                if i == j:
+                    continue
                 relative_positions = positions[i] - positions[j]
                 distance = np.linalg.norm(relative_positions)
                 if distance > Verlet_sphere:
                     continue
 
-                radii_sum = radii[i,0] + radii[j,0]
+                radii_sum = radii[i, 0] + radii[j, 0]
                 if distance != 0:
-                    unit_vectors[i,j] = relative_positions / distance
-                cos_phi = -np.sum(unit_vectors[i,j] * unit_velocities[i])
-                fov = anisotropic_character + (1.-anisotropic_character) * (1+cos_phi)/2.
+                    unit_vectors[i, j] = relative_positions / distance
+                cos_phi = -np.sum(unit_vectors[i, j] * unit_velocities[i])
+                fov = (
+                    anisotropic_character
+                    + (1.0 - anisotropic_character) * (1 + cos_phi) / 2.0
+                )
 
-                repulsive_force_mat[i,j] = A1 * np.exp( (radii_sum - distance)/B1) * unit_vectors[i,j] * fov \
-                                   + A2 * np.exp( (radii_sum - distance)/B2 ) * unit_vectors[i,j]
+                repulsive_force_mat[i, j] = (
+                    A1 * np.exp((radii_sum - distance) / B1) * unit_vectors[i, j] * fov
+                    + A2 * np.exp((radii_sum - distance) / B2) * unit_vectors[i, j]
+                )
 
         return np.sum(repulsive_force_mat, axis=1)
 
@@ -464,16 +540,23 @@ class SocialForce:
         otherwise uses the vectorised NumPy implementation.
         """
         if self.n_pedestrians > 250:
-            force = self.repulsive_force_njit(positions, radii, velocities,
-                                             self.anisotropic_character, self.Verlet_sphere,
-                                             self.A1, self.B1, self.A2, self.B2)
+            force = self.repulsive_force_njit(
+                positions,
+                radii,
+                velocities,
+                self.anisotropic_character,
+                self.Verlet_sphere,
+                self.A1,
+                self.B1,
+                self.A2,
+                self.B2,
+            )
         else:
             force = self.repulsive_force_numpy(positions, radii, velocities)
         if "repulsive_forces" in self.results.keys():
             self.forces["repulsive"] = force
         return force
- 
-    
+
     def boundary_force(self, positions: npt.NDArray):
         """
         Compute repulsive acceleration from the nearest boundary segment.
@@ -499,26 +582,26 @@ class SocialForce:
         """
         if self.boundaries is None:
             return np.zeros_like(positions)
-        p = positions[:, None, :] # (N,1,2)
-        b0 = self.boundaries[:,0,:][None,:,:] # (1,M,2) boundary starts
-        b1 = self.boundaries[:,1,:][None,:,:] # (1,M,2) boundary ends
+        p = positions[:, None, :]  # (N,1,2)
+        b0 = self.boundaries[:, 0, :][None, :, :]  # (1,M,2) boundary starts
+        b1 = self.boundaries[:, 1, :][None, :, :]  # (1,M,2) boundary ends
 
-        v = b1-b0 # (1,M,2) boundary directions vector
-        w = p-b0 # (N,M,2) position to boundary vector
+        v = b1 - b0  # (1,M,2) boundary directions vector
+        w = p - b0  # (N,M,2) position to boundary vector
 
-        vv = np.sum(v*v, axis=2, keepdims=True) # (1,M,1) Norm of v vectors
-        vw = np.sum(w*v, axis=2, keepdims=True) # (N,M,1) dot product of v and w
+        vv = np.sum(v * v, axis=2, keepdims=True)  # (1,M,1) Norm of v vectors
+        vw = np.sum(w * v, axis=2, keepdims=True)  # (N,M,1) dot product of v and w
 
-        t = vw/vv # (N,M,1) norm vector towards closest point on each boundary
-        t = np.clip(t, 0.0, 1.0) # projection along segment
-        closest = b0 + t * v # (N,M,2)
+        t = vw / vv  # (N,M,1) norm vector towards closest point on each boundary
+        t = np.clip(t, 0.0, 1.0)  # projection along segment
+        closest = b0 + t * v  # (N,M,2)
 
-        diff = p-closest # (N,M,2)
+        diff = p - closest  # (N,M,2)
 
-        dist = np.linalg.norm(diff, axis=2, keepdims=True) # (N,M,1)
+        dist = np.linalg.norm(diff, axis=2, keepdims=True)  # (N,M,1)
 
         if self.boundary_selection == "nearest":
-            idx = np.argmin(dist, axis=1)[:,0] # (N,)
+            idx = np.argmin(dist, axis=1)[:, 0]  # (N,)
             nearest_dist = dist[np.arange(self.n_pedestrians), idx]
             nearest_dir = diff[np.arange(self.n_pedestrians), idx] / nearest_dist
 
@@ -526,11 +609,11 @@ class SocialForce:
             force = force_mag * nearest_dir
 
         elif self.boundary_selection == "superpose":
-            mask = (dist < self.boundary_verlet_sphere)
-            directions = np.divide(diff, dist,
-                                   out=np.zeros_like(diff),
-                                   where=(dist!=0))
-            force_mag = self.Ab * np.exp((self.radii[:,None,:] - dist) / self.Bb)
+            mask = dist < self.boundary_verlet_sphere
+            directions = np.divide(
+                diff, dist, out=np.zeros_like(diff), where=(dist != 0)
+            )
+            force_mag = self.Ab * np.exp((self.radii[:, None, :] - dist) / self.Bb)
             force_mag *= mask.astype(force_mag.dtype)
             force = np.sum(force_mag * directions, axis=1)
         else:
@@ -539,7 +622,7 @@ class SocialForce:
         if "boundary_forces" in self.results.keys():
             self.forces["boundary"] = force
         return force
-    
+
     def total_force(self, positions, desired_speeds, velocities):
         """
         Compute total acceleration (sum of model components).
@@ -567,13 +650,15 @@ class SocialForce:
         - + boundary_force(...)
         """
         desired_directions = self.calc_desired_directions()
-        total_force = self.driving_force(velocities, desired_directions, desired_speeds) \
-                    + self.repulsive_force(positions, self.radii, velocities) \
-                    + self.boundary_force(positions)
+        total_force = (
+            self.driving_force(velocities, desired_directions, desired_speeds)
+            + self.repulsive_force(positions, self.radii, velocities)
+            + self.boundary_force(positions)
+        )
         if "total_forces" in self.results.keys():
             self.forces["total"] = total_force
         return total_force
-    
+
     def calc_desired_speeds(self, t, positions):
         """
         Compute time-varying desired speeds based on “impatience”.
@@ -603,14 +688,16 @@ class SocialForce:
 
         This is a global-from-start measure; it does not reset per waypoint.
         """
-        if t == 0.:
+        if t == 0.0:
             return self.desired_speeds0
         pos0_to_pos = positions - self.positions0
         avg_speed = np.linalg.norm(pos0_to_pos / t, axis=1, keepdims=True)
         impatience = 1 - avg_speed / self.desired_speeds0
-        new_desired_speeds = (1-impatience) * self.desired_speeds0 + impatience * self.maximal_speeds
+        new_desired_speeds = (
+            1 - impatience
+        ) * self.desired_speeds0 + impatience * self.maximal_speeds
         return new_desired_speeds
-    
+
     def calc_desired_directions(self) -> npt.NDArray:
         """
         Compute unit direction vectors from positions to destinations.
@@ -622,10 +709,15 @@ class SocialForce:
             where position equals destination.
         """
         desired_directions = self.current_destinations() - self.positions
-        desired_directions_norm = np.linalg.norm(desired_directions, axis=1, keepdims=True)
-        desired_directions = np.divide(desired_directions, desired_directions_norm,
-                                       out=np.zeros_like(desired_directions),
-                                       where=(desired_directions_norm!=0))
+        desired_directions_norm = np.linalg.norm(
+            desired_directions, axis=1, keepdims=True
+        )
+        desired_directions = np.divide(
+            desired_directions,
+            desired_directions_norm,
+            out=np.zeros_like(desired_directions),
+            where=(desired_directions_norm != 0),
+        )
         return desired_directions
 
     def current_destinations(self) -> npt.NDArray:
@@ -637,7 +729,9 @@ class SocialForce:
         current_destinations : (N, 2) ndarray
             Coordinates to which each pedestrian currently wishes to go
         """
-        return self.destinations[np.arange(self.n_pedestrians), self.destinations_indices]
+        return self.destinations[
+            np.arange(self.n_pedestrians), self.destinations_indices
+        ]
 
     def current_destinations_range(self) -> npt.NDArray:
         """
@@ -649,7 +743,9 @@ class SocialForce:
         current_destinations : (N, 2) ndarray
             Coordinates to which each pedestrian currently wishes to go
         """
-        return self.destinations_range[np.arange(self.n_pedestrians), self.destinations_indices]
+        return self.destinations_range[
+            np.arange(self.n_pedestrians), self.destinations_indices
+        ]
 
     def update_destinations(self):
         """
@@ -669,9 +765,12 @@ class SocialForce:
         The update is vectorised; all eligible agents advance by exactly one
         waypoint per call.
         """
-        pedestrians_in_range = np.linalg.norm(self.current_destinations() - self.positions, axis=1) \
-                            <= self.current_destinations_range().flatten()
-        pedestrians_not_at_last_dest = self.destinations_indices < self.destinations.shape[1] - 1
+        pedestrians_in_range = (
+            np.linalg.norm(self.current_destinations() - self.positions, axis=1)
+            <= self.current_destinations_range().flatten()
+        )
+        pedestrians_not_at_last_dest = (
+            self.destinations_indices < self.destinations.shape[1] - 1
+        )
         mask = np.where(pedestrians_in_range & pedestrians_not_at_last_dest)[0]
         self.destinations_indices[mask] += 1
-
