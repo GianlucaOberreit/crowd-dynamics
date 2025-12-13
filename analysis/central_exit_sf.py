@@ -2,12 +2,14 @@ from crowd_dynamics.social_force import SocialForce
 import numpy as np
 import postprocessing.plotting
 import postprocessing.movie
+import matplotlib.pyplot as plt
 
 ###############################
 # Initialise simulation class #
 ###############################
 n_pedestrians=300
 SF = SocialForce(n_pedestrians)
+#SF.A2 = 5.
 
 ##########################
 # Initialise pedestrians #
@@ -35,12 +37,13 @@ v0 = np.zeros_like(p0)
 
 ### Destinations ###
 destinations = np.zeros((n_pedestrians,2,2))
-destinations[:,1,0] = 100000
+angles = np.linspace(0, 2*np.pi, n_pedestrians, endpoint=False)
+r = 1e6
+destinations[:,1] = np.column_stack((r * np.cos(angles), r*np.sin(angles)))
 destinations_range = np.zeros((n_pedestrians, 2,1))
-destinations_range[:,0,0] = 0.3
+destinations_range[:,0,0] = 0.35
 
 SF.init_pedestrians(p0, destinations, velocities=v0, destinations_range=destinations_range)
-
 
 ##################
 # Run simulation #
@@ -52,7 +55,12 @@ results = {key: [] for key in to_save}
 SF.results = results
 times = []
 i = 0 
-while SF.t < 40 and SF.solver.status == 'running':
+current_destinations = SF.current_destinations()
+initial_radial_positions = np.linalg.norm(SF.positions, axis=1)
+time_to_exit = np.empty((n_pedestrians,))
+moved = np.zeros((n_pedestrians,), dtype=bool)
+k=0
+while SF.t < 60 and SF.solver.status == 'running':
     if i%100 == 0:
         print(i)
     SF.step()
@@ -74,10 +82,16 @@ while SF.t < 40 and SF.solver.status == 'running':
         SF.results["boundary_forces"].append(SF.forces["boundary"])
 
     for j in range(n_pedestrians):
-        if SF.destinations_indices[j] == 1:
-            SF.positions[j] = (100000, 0)
+        if SF.destinations_indices[j] == 1 and not moved[j]:
+            SF.positions[j] = destinations[j,1]
+            moved[j] = True
+            time_to_exit[j] = k
+            k+=1
     times.append(SF.t)
     i+=1
+#    mask = (current_destinations[:,0] != SF.current_destinations()[:,0])
+#    current_destinations = SF.current_destinations()
+#    time_to_exit[mask] = SF.t
 
 
 positions = results["positions"]
@@ -86,9 +100,13 @@ positions = results["positions"]
 # Grab Popcorn #
 ################
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
+'''
 postprocessing.movie.make_movie(times, positions, SF,
                                 regularised_timesteps=regularised_timesteps,
                                 title="Stripe formation in intersection flows",
                                 interval=50,
                                 x_bound=(-45,45), y_bound=(-45, 45))
-#postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-20,70), y_bound=(-60,20), colors=colors, filetype='pdf')
+'''
+#postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-45,45), y_bound=(-45,45), filetype='pdf')
+plt.scatter(initial_radial_positions, time_to_exit)
+plt.show()
