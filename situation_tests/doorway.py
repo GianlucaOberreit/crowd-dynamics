@@ -51,7 +51,7 @@ SF.set_boundaries(boundaries, boundary_selection="superpose", boundary_verlet_sp
 # Run simulation #
 ##################
 SF.init_solver(t_bound=15)
-times, results = postprocessing.simulation.run_sim(SF, to_save=("positions",))
+times, results = SF.run(to_save=("positions",))
 positions = results["positions"]
 
 ################

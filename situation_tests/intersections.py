@@ -61,18 +61,16 @@ SF.init_pedestrians(p0, destinations, velocities=v0)
 # Run simulation #
 ##################
 SF.init_solver(t_bound=80)
-times, results = postprocessing.simulation.run_sim(SF, to_save=("positions",))
+times, results = SF.run(to_save=("positions",))
 positions = results["positions"]
 
 ################
 # Grab Popcorn #
 ################
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
-'''
 postprocessing.movie.make_movie(times, positions, SF,
                                 regularised_timesteps=regularised_timesteps,
                                 colors=colors,
                                 title="Stripe formation in intersection flows",
                                 x_bound=(-20,70), y_bound=(-60, 20))
-'''
-postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-20,70), y_bound=(-60,20), colors=colors, filetype='pdf')
+#postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-20,70), y_bound=(-60,20), colors=colors, filetype='pdf')

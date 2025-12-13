@@ -53,7 +53,7 @@ SF.set_boundaries(boundaries)
 # Run simulation #
 ##################
 SF.init_solver(t_bound=15)
-times, results = postprocessing.simulation.run_sim(SF, to_save=("positions", "velocities"))
+times, results = SF.run(to_save=("positions", "velocities"))
 positions = results["positions"]
 
 ################
