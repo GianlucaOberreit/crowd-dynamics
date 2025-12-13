@@ -59,5 +59,5 @@ positions = results["positions"]
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
 colors = np.array(['blue']*(n_pedestrians//2) + ['red']*(n_pedestrians - n_pedestrians//2))
 postprocessing.movie.make_movie(times, positions, SF, regularised_timesteps=regularised_timesteps, colors=colors, title="2 Directional Pedestrian Flow in a Doorway", x_bound=(-10,10), y_bound=(-3, 3), interval=50)
-#postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-10,10), y_bound=(-3,3), colors=colors, filetype='pdf')
+#postprocessing.plotting.plot(positions[-1], SF, save="doorway", title="Striping in Intersecting Flows", x_bound=(-10,10), y_bound=(-3,3), colors=colors, filetype='pdf')
 

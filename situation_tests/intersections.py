@@ -72,4 +72,4 @@ postprocessing.movie.make_movie(times, positions, SF,
                                 colors=colors,
                                 title="Stripe formation in intersection flows",
                                 x_bound=(-20,70), y_bound=(-60, 20))
-#postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-20,70), y_bound=(-60,20), colors=colors, filetype='pdf')
+#postprocessing.plotting.plot(positions[-10], SF, save="striping", title="Striping in Intersecting Flows", x_bound=(-30,60), y_bound=(-40,20), colors=colors, filetype='pdf')
