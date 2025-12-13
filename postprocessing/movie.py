@@ -14,21 +14,24 @@ def regularise_positions(all_times, all_positions, regularised_timesteps):
     return regularised_positions
 
 
-def make_movie(all_times, all_positions, SF, show_animation=True, save=False, fps=30, regularised_timesteps: ArrayLike | bool =False, colors: ArrayLike | bool = False, title="A Title"):
+def make_movie(all_times, all_positions, SF, show_animation=True, interval=100, save=False, fps=30, regularised_timesteps: ArrayLike | bool =False, colors: ArrayLike | None = None, title="A Title", x_bound: tuple | None = None, y_bound: tuple | None = None):
     all_positions = np.array(all_positions)
     n_pedestrians = all_positions.shape[1]
     fig, ax = plt.subplots()
-    colors = colors if colors else 'b'
+    colors = colors if colors is not None else 'b'
 
     if regularised_timesteps is not False:
         positions = regularise_positions(all_times, all_positions, regularised_timesteps)
     else:
         positions = all_positions
     scat = ax.scatter([positions[0][:,0]],[positions[0][:,1]], c=colors, s=100)
-    for line in SF.boundaries:
-        ax.plot(line[:, 0], line[:, 1], color='black', linewidth=2)
-    ax.set_xlim(-30,30)
-    ax.set_ylim(-3.5,3.5)
+    if SF.boundaries is not None:
+        for line in SF.boundaries:
+            ax.plot(line[:, 0], line[:, 1], color='black', linewidth=2)
+    if x_bound is not None:
+        ax.set_xlim(x_bound)
+    if y_bound is not None:
+        ax.set_ylim(y_bound)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title(title)
@@ -38,7 +41,7 @@ def make_movie(all_times, all_positions, SF, show_animation=True, save=False, fp
         scat.set_offsets(data)
         return [scat]
 
-    ani = FuncAnimation(fig, update, frames=len(positions), interval=100, blit=True)
+    ani = FuncAnimation(fig, update, frames=len(positions), interval=interval, blit=True)
 
     if save:
         ani.save(f"{save}.mp4", writer="ffmpeg", fps=fps)
