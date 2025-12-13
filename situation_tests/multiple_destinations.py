@@ -1,7 +1,6 @@
 from crowd_dynamics.social_force import SocialForce
 import numpy as np
 import postprocessing.plotting
-import postprocessing.simulation
 
 ###############################
 # Initialise simulation class #

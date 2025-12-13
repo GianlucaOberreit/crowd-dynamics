@@ -1,7 +1,6 @@
 from crowd_dynamics.social_force import SocialForce
 import numpy as np
 import postprocessing.movie
-import postprocessing.simulation
 import postprocessing.plotting
 
 ###############################
