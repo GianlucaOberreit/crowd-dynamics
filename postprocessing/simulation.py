@@ -1,14 +1,14 @@
 from crowd_dynamics.social_force import SocialForce
 import numpy as np
 
-def run_sim(SF, t_bound, print_freq=100, to_save=("positions",)):
-    SF.init_solver(t_bound=t_bound)
-
+def run_sim(SF, t_bound=None, print_freq=100, to_save=("positions",)):
+    if t_bound is None:
+        t_bound = SF.solver.t_bound
     results = {key: [] for key in to_save}
     times = []
 
     i = 0 
-    while SF.t < 70 and SF.solver.status == 'running':
+    while SF.t < t_bound and SF.solver.status == 'running':
         if i%print_freq == 0:
             print(i)
         SF.step()
@@ -30,9 +30,7 @@ def run_sim(SF, t_bound, print_freq=100, to_save=("positions",)):
                                                           SF.velocities))
         if "repulsive_forces" in to_save:
             results["repulsive_forces"].append(SF.repulsive_force(SF.positions,
-                                                                  SF.destinations,
                                                                   SF.radii,
-                                                                  SF.desired_speeds,
                                                                   SF.velocities
                                                                   ))
         if "driving_forces" in to_save:
@@ -41,6 +39,8 @@ def run_sim(SF, t_bound, print_freq=100, to_save=("positions",)):
                                                               desired_directions,
                                                               SF.desired_speeds
                                                               ))
+        if "boundary_forces" in to_save:
+            results["boundary_forces"].append(SF.boundary_force(SF.positions))
         times.append(SF.t)
         i+=1
 

@@ -37,6 +37,9 @@ class SocialForce:
 
         self.rng = np.random.default_rng(rng_seed)
 
+        self.results={}
+        self.forces = {"total": None, "repulsive": None, "driving": None, "boundary": None}
+
     def init_solver(self, t_bound, solver="RK45", rtol=1e-3, atol=1e-4, max_step=None):
         y0 = np.concatenate((self.positions0.flatten(),
                             self.velocities0.flatten()))
@@ -65,6 +68,39 @@ class SocialForce:
         self.desired_speeds = self.calc_desired_speeds(self.t, self.positions)
         self.update_destinations()
 
+    def run(self, t_bound=None, print_freq=100, to_save=("positions",)):
+        if t_bound is None:
+            t_bound = self.solver.t_bound
+
+        self.results = {key: [] for key in to_save}
+        times = []
+
+        i = 0 
+        while self.t < t_bound and self.solver.status == 'running':
+            if print_freq is not None and print_freq is not False and i%print_freq == 0:
+                print(i)
+            self.step()
+            if "positions" in to_save:
+                self.results["positions"].append(self.positions.copy())
+            if "velocities" in to_save:
+                self.results["velocities"].append(self.velocities.copy())
+            if "desired_speeds" in to_save:
+                self.results["desired_speeds"].append(self.desired_speeds.copy())
+            if "desired_directions" in to_save:
+                self.results["desired_directions"].append(self.calc_desired_directions())
+            if "total_forces" in to_save:
+                self.results["total_forces"].append(self.forces["total"])
+            if "repulsive_forces" in to_save:
+                self.results["repulsive_forces"].append(self.forces["repulsive"])
+            if "driving_forces" in to_save:
+                self.results["driving_forces"].append(self.forces["driving"])
+            if "boundary_forces" in to_save:
+                self.results["boundary_forces"].append(self.forces["boundary"])
+
+            times.append(self.t)
+            i+=1
+
+        return times, self.results
 
     def init_pedestrians(self, positions: npt.ArrayLike, destinations, velocities: npt.ArrayLike | float =0., destinations_range=None):
         """Set positions and velocities of pedestrians
@@ -99,7 +135,10 @@ class SocialForce:
         self.boundary_verlet_sphere = boundary_verlet_sphere
 
     def driving_force(self, velocities, desired_directions, desired_speeds):
-        return 1/self.relaxation_times * (desired_speeds * desired_directions - velocities)
+        force = 1/self.relaxation_times * (desired_speeds * desired_directions - velocities)
+        if "driving_forces" in self.results.keys():
+            self.forces["driving"] = force
+        return force
 
     def calc_fovs(self, velocities, norm_vectors):
         speeds = np.linalg.norm(velocities, axis=1, keepdims=True)
@@ -152,10 +191,14 @@ class SocialForce:
 
     def repulsive_force(self, positions, radii, velocities):
         if self.n_pedestrians > 250:
-            return self.repulsive_force_njit(positions, radii, velocities,
+            force = self.repulsive_force_njit(positions, radii, velocities,
                                              self.anisotropic_character, self.Verlet_sphere,
                                              self.A1, self.B1, self.A2, self.B2)
-        return self.repulsive_force_numpy(positions, radii, velocities)
+        else:
+            force = self.repulsive_force_numpy(positions, radii, velocities)
+        if "repulsive_forces" in self.results.keys():
+            self.forces["repulsive"] = force
+        return force
  
     
     def boundary_force(self, positions: npt.NDArray):
@@ -198,17 +241,17 @@ class SocialForce:
         else:
             raise
 
+        if "boundary_forces" in self.results.keys():
+            self.forces["boundary"] = force
         return force
     
-    def individuality_force(self, desired_directions):
-        return np.zeros_like(desired_directions)
-
     def total_force(self, positions, desired_speeds, velocities):
         desired_directions = self.calc_desired_directions()
         total_force = self.driving_force(velocities, desired_directions, desired_speeds) \
                     + self.repulsive_force(positions, self.radii, velocities) \
-                    + self.boundary_force(positions) \
-                    + self.individuality_force(desired_directions)
+                    + self.boundary_force(positions)
+        if "total_forces" in self.results.keys():
+            self.forces["total"] = total_force
         return total_force
     
     def calc_desired_speeds(self, t, positions):
