@@ -2,6 +2,7 @@ from crowd_dynamics.social_force import SocialForce
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.patches import Circle
 from scipy.interpolate import interp1d
 from numpy.typing import ArrayLike
 
@@ -18,13 +19,18 @@ def make_movie(all_times, all_positions, SF, show_animation=True, interval=100, 
     all_positions = np.array(all_positions)
     n_pedestrians = all_positions.shape[1]
     fig, ax = plt.subplots()
-    colors = colors if colors is not None else 'b'
+    colors = colors if colors is not None else np.array(['b']*n_pedestrians)
 
     if regularised_timesteps is not False:
         positions = regularise_positions(all_times, all_positions, regularised_timesteps)
     else:
         positions = all_positions
-    scat = ax.scatter([positions[0][:,0]],[positions[0][:,1]], c=colors, s=100)
+#    scat = ax.scatter([positions[0][:,0]],[positions[0][:,1]], c=colors, s=100)
+    circles = []
+    for i in range(n_pedestrians):
+        c = Circle(positions[0][i], SF.radii[i], color=colors[i])
+        ax.add_patch(c)
+        circles.append(c)
     if SF.boundaries is not None:
         for line in SF.boundaries:
             ax.plot(line[:, 0], line[:, 1], color='black', linewidth=2)
@@ -38,8 +44,11 @@ def make_movie(all_times, all_positions, SF, show_animation=True, interval=100, 
 
     def update(frame):
         data = positions[frame]
-        scat.set_offsets(data)
-        return [scat]
+        for i, circle in enumerate(circles):
+            circle.center = data[i]
+        return circles
+#        scat.set_offsets(data)
+#        return [scat]
 
     ani = FuncAnimation(fig, update, frames=len(positions), interval=interval, blit=True)
 

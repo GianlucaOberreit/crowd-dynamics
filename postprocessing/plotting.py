@@ -1,14 +1,15 @@
 from crowd_dynamics.social_force import SocialForce
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
+from matplotlib.patches import Circle
 from numpy.typing import ArrayLike
 
 
 def plot(positions, SF, show=True, continuous=False, save=False, colors: ArrayLike | None = None, title="A Title", x_bound: tuple | None = None, y_bound: tuple | None = None, filetype='png'):
     positions = np.array(positions)
     fig, ax = plt.subplots()
-    colors = colors if colors is not None else ('b',)
+    colors = colors if colors is not None else np.array(['b']*SF.n_pedestrians)
+#    colors = colors if colors is not None else 
 
     if continuous:
         if len(positions.shape) == 3:
@@ -17,7 +18,10 @@ def plot(positions, SF, show=True, continuous=False, save=False, colors: ArrayLi
         else:
             ax.plot(positions[:,0],positions[:,1], color=colors[p])
     else:
-        ax.scatter(positions[:,0],positions[:,1], c=colors, s=100)
+        #ax.scatter(positions[:,0],positions[:,1], c=colors, s=100)
+        for i in range(SF.n_pedestrians):
+            circle = Circle(positions[i], SF.radii[i], fill=True, color=colors[i])
+            ax.add_patch(circle)
     if SF.boundaries is not None:
         for line in SF.boundaries:
             ax.plot(line[:, 0], line[:, 1], color='black', linewidth=2)
@@ -28,6 +32,7 @@ def plot(positions, SF, show=True, continuous=False, save=False, colors: ArrayLi
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title(title)
+    ax.set_aspect('equal')
 
     if save:
         fig.savefig(f"{save}.{filetype}")
