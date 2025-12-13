@@ -6,7 +6,7 @@ import postprocessing.movie
 ###############################
 # Initialise simulation class #
 ###############################
-n_pedestrians=5
+n_pedestrians=300
 SF = SocialForce(n_pedestrians)
 
 ##########################
@@ -19,7 +19,7 @@ def rot(th):
     c,s = np.cos(th/2), np.sin(th/2)
     return np.array([[c,-s],[s,c]])
 
-radius=4 # end semicircle length
+radius=45 # end semicircle length
 
 # Sample all positions in a rectangle with a semicircle at the end
 i=0
@@ -29,8 +29,6 @@ while i < n_pedestrians:
     if in_circle:
         p0[i] = x,y
         i += 1
-
-postprocessing.plotting.plot(p0, SF)
 
 ### velocities ###
 v0 = np.zeros_like(p0)
@@ -54,7 +52,7 @@ results = {key: [] for key in to_save}
 SF.results = results
 times = []
 i = 0 
-while SF.t < 80 and SF.solver.status == 'running':
+while SF.t < 40 and SF.solver.status == 'running':
     if i%100 == 0:
         print(i)
     SF.step()
@@ -75,9 +73,9 @@ while SF.t < 80 and SF.solver.status == 'running':
     if "boundary_forces" in to_save:
         SF.results["boundary_forces"].append(SF.forces["boundary"])
 
-    for i in range(n_pedestrians):
-        if SF.destinations_indices[i] == 1:
-            SF.positions[i] = (100000, 0)
+    for j in range(n_pedestrians):
+        if SF.destinations_indices[j] == 1:
+            SF.positions[j] = (100000, 0)
     times.append(SF.t)
     i+=1
 
@@ -91,5 +89,6 @@ regularised_timesteps = np.linspace(times[0], times[-1], len(times))
 postprocessing.movie.make_movie(times, positions, SF,
                                 regularised_timesteps=regularised_timesteps,
                                 title="Stripe formation in intersection flows",
-                                x_bound=(-20,70), y_bound=(-60, 20))
+                                interval=50,
+                                x_bound=(-45,45), y_bound=(-45, 45))
 #postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-20,70), y_bound=(-60,20), colors=colors, filetype='pdf')
