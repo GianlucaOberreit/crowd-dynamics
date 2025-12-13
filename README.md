@@ -11,3 +11,9 @@ Ready to run simulations files are available for (among others)
 
 Videos of these simulations have been saved in the `videos` directory under self-explanatory names.
 The images from the social force section of the report are saved in `images`
+
+## Monte Carlo model
+
+## Comparison of the models
+A simulation in the monte carlo model style run with the social force model can be found in
+`social_force/analysis/central_exit_sf.py`, with its resulting video `social_force/videos/montecarlo.mp4`
