@@ -2,6 +2,7 @@ from crowd_dynamics.social_force import SocialForce
 import numpy as np
 import postprocessing.movie
 import postprocessing.simulation
+import postprocessing.plotting
 
 ###############################
 # Initialise simulation class #
@@ -38,14 +39,14 @@ boundaries = np.array([
     [[-150,3], [150,3]],
     [[-150, -3], [150,-3]],
 ])
-SF.Ab = 10 # Make boundary repulsion higher to avoid clipping through walls
 SF.set_boundaries(boundaries)
 
 
 ##################
 # Run simulation #
 ##################
-times, results = postprocessing.simulation.run_sim(SF, t_bound=100, to_save=("positions",))
+SF.init_solver(t_bound=50)
+times, results = postprocessing.simulation.run_sim(SF, to_save=("positions",))
 positions = results["positions"]
 
 ################
@@ -53,5 +54,6 @@ positions = results["positions"]
 ################
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
 colors = np.array(['blue']*(n_pedestrians//2) + ['red']*(n_pedestrians - n_pedestrians//2))
-postprocessing.movie.make_movie(times, positions, SF, regularised_timesteps=regularised_timesteps, colors=colors, title="Line Formation in a Hallway")
+postprocessing.movie.make_movie(times, positions, SF, regularised_timesteps=regularised_timesteps, colors=colors, title="Lane Formation in a Hallway", x_bound=(-30,30), y_bound=(-3.5, 3.5), interval=50)
+#postprocessing.plotting.plot(positions[-1], SF, title="Lane formation in a Hallway", x_bound=(-30,30), y_bound=(-3.5,3.5), colors=colors, filetype='pdf')
 
