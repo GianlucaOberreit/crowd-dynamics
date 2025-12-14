@@ -1,4 +1,7 @@
 import imageio
+
+# The only purpose of this file is to pack folders with snapshots into animations
+
 images = []
 
 filenames = [f"crowd_simulation_results/states_N_300_hom/state_step_{i+1}.png" for i in range(300)]

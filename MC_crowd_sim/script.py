@@ -190,10 +190,10 @@ class CrowdMCImproved:
         print("Initial relaxation complete.")
 
 
-    def _mc_relaxation(self, active_indices, M_I = 200):
+    def _mc_relaxation(self, active_indices, M = 200):
 
         # Calibration of delta_r and delta_u before last step of M_I
-        for i in range(M_I):
+        for i in range(M):
             # Calibrating mc_step size every step
             accepted_moves = 0
             total_attempts = 0
@@ -404,7 +404,7 @@ class CrowdMCImproved:
         print(f"Saved serving analysis plots to {output_dir}/")
 
 
-def run_complete_simulation_once(params = default_params, save_init = True, save_analysis = True, summary = True, save_stats = False, save_snapshots = False):
+def run_complete_simulation_once(params = default_params, save_init = True, save_analysis = True, summary = True, save_stats = False, save_snapshots = False, seed = 42):
     """Run complete simulation and save all results"""
     if summary:
         print("=== Crowd Dynamics Simulation ===")
@@ -416,7 +416,7 @@ def run_complete_simulation_once(params = default_params, save_init = True, save
 
     try:
         # Create and initialize crowd
-        crowd = CrowdMCImproved(**params)
+        crowd = CrowdMCImproved(**params, seed=seed)
 
         # Save initialization results
         if save_init:
@@ -429,21 +429,6 @@ def run_complete_simulation_once(params = default_params, save_init = True, save
         if save_analysis:
             crowd.save_serving_analysis("serving_analysis")
 
-        # Print summary
-        if summary:
-            print("\n=== Simulation Summary ===")
-            print(f"Total agents: {crowd.N}")
-            print(f"Agents served: {len(crowd.served_agents)}")
-            print(f"Target area fraction: {crowd.phi}")
-            print(f"Actual area fraction: {actual_phi:.3f}")
-            if len(crowd.served_agents) > 0:
-                served_times = crowd.serving_times[crowd.served_agents]
-                print(f"Average serving time: {np.mean(served_times):.2f} steps")
-                print(f"Serving time std: {np.std(served_times):.2f} steps")
-
-            print(f"\nAll results saved to: {output_dir}/")
-            print("Check the directory for PNG image files.")
-
         if save_stats:
             distances = np.linalg.norm(crowd.initial_lattice, axis=1)
             serving_steps = crowd.serving_times
@@ -455,23 +440,30 @@ def run_complete_simulation_once(params = default_params, save_init = True, save
         traceback.print_exc()
 
 
-def run_complete_simulations(number = 10):
-    dist_statistic = np.array([])
-    time_statistic = np.array([])
+def run_complete_simulations(params = default_params, number = 10, seed = 42):
+    dist_statistics = np.array([])
+    time_statistics = np.array([])
     rad_statistics = np.array([])
+
     for i in range(number):
         print(f"Simulation No. {i + 1}")
-        dists, times, rads = run_complete_simulation_once(save_init=False, save_analysis=False, summary=False, save_stats= True)
-        dist_statistic = np.append(dist_statistic, dists)
-        time_statistic = np.append(time_statistic, times)
+        dists, times, rads = run_complete_simulation_once(params=params,save_init=False, save_analysis=False, summary=False, save_stats= True, seed=seed)
+        dist_statistics = np.append(dist_statistics, dists)
+        time_statistics = np.append(time_statistics, times)
         rad_statistics = np.append(rad_statistics, rads)
+
+        seed += 1
+
+    np.savetxt("dist_stats.csv", dist_statistics, delimiter=",")
+    np.savetxt("time_stats.csv", time_statistics, delimiter=",")
+    np.savetxt("rad_stats.csv", rad_statistics, delimiter=",")
 
     # Simple scatter plot for serving time vs distance
     cmap = cm.get_cmap('winter')
     norm = mcolors.Normalize(vmin=min(rad_statistics), vmax=max(rad_statistics))
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(dist_statistic, time_statistic / len(rads), alpha=0.6, s=20, cmap=cmap, norm=norm, c=rad_statistics)
+    ax.scatter(dist_statistics, time_statistics / len(rads), alpha=0.6, s=20, cmap=cmap, norm=norm, c=rad_statistics)
 
     # Add sequential serving law for comparison
     d_plot = np.linspace(0, 1, 100)
@@ -495,23 +487,26 @@ def run_complete_simulations(number = 10):
     plt.close()
 
 if __name__ == "__main__":
-    #N = [100, 150, 200, 250]
-    #phi = [0.3, 0.4, 0.5, 0.6]
-    #p = [0.0, 0.05, 0.1, 0.2, 0.4]
+    #N = [100]
+    #phi = [0.2, 0.4, 0.6]
+    #p = [0.0, 0.1, 0.2, 0.4, 0.8]
+    #delta_r = [0, 0.1, 0.2]
 
-    #N = [150]
-    #phi = [0.6]
-    #p = [0.2]
-    #for N_ in N:
-    #    for phi_ in phi:
-    #        for p_ in p:
-    #            params = {
-    #                'N': N_,  # Reduced for demo
-    #                'R': 1.0,  # Domain radius
-    #                'phi': phi_,  # Reduced area fraction for easier computation
-    #                'p': p_,  # Probability of non-radial moves
-    #                'delta_r': 0.2  # (Non)Homogeneous crowd
-    #            }
-    #            run_complete_simulation_once(params=params, save_snapshots=True)
+    N = [300]
+    phi = [0.6]
+    p = [0.2]
+    delta_r = [0]
+    for N_ in N:
+        for phi_ in phi:
+            for p_ in p:
+                for del_ in delta_r:
+                    params = {
+                        'N': N_,  # Reduced for demo
+                        'R': 1.0,  # Domain radius
+                        'phi': phi_,  # Reduced area fraction for easier computation
+                        'p': p_,  # Probability of non-radial moves
+                        'delta_r': del_  # (Non)Homogeneous crowd
+                    }
+                    run_complete_simulation_once(params=params, save_snapshots=True)
 
-    run_complete_simulations(10)
+    #run_complete_simulations(10)
