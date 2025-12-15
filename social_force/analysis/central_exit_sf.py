@@ -21,7 +21,7 @@ def rot(th):
     c,s = np.cos(th/2), np.sin(th/2)
     return np.array([[c,-s],[s,c]])
 
-radius=45 # end semicircle length
+radius=6.7 # end semicircle length
 
 # Sample all positions in a rectangle with a semicircle at the end
 i=0
@@ -60,7 +60,7 @@ initial_radial_positions = np.linalg.norm(SF.positions, axis=1)
 time_to_exit = np.empty((n_pedestrians,))
 moved = np.zeros((n_pedestrians,), dtype=bool)
 k=0
-while SF.t < 60 and SF.solver.status == 'running':
+while SF.t < 22 and SF.solver.status == 'running':
     if i%100 == 0:
         print(i)
     SF.step()
@@ -100,13 +100,12 @@ positions = results["positions"]
 # Grab Popcorn #
 ################
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
-'''
 postprocessing.movie.make_movie(times, positions, SF,
                                 regularised_timesteps=regularised_timesteps,
                                 title="Stripe formation in intersection flows",
                                 interval=50,
-                                x_bound=(-45,45), y_bound=(-45, 45))
-'''
+                                fps=15,
+                                x_bound=(-6.71,6.71), y_bound=(-6.71,6.71))
 #postprocessing.plotting.plot(positions[-1], SF, title="Striping in Intersecting Flows", x_bound=(-45,45), y_bound=(-45,45), filetype='pdf')
-plt.scatter(initial_radial_positions, time_to_exit)
-plt.show()
+#plt.scatter(initial_radial_positions, time_to_exit)
+#plt.show()

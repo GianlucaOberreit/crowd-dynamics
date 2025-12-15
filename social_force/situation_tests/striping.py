@@ -67,7 +67,7 @@ positions = results["positions"]
 # Grab Popcorn #
 ################
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
-postprocessing.movie.make_movie(times, positions, SF,
+postprocessing.movie.make_movie(times, positions, SF, save="striping",
                                 regularised_timesteps=regularised_timesteps,
                                 colors=colors,
                                 title="Stripe formation in intersection flows",

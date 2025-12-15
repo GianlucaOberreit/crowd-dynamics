@@ -41,6 +41,7 @@ def make_movie(all_times, all_positions, SF, show_animation=True, interval=100, 
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title(title)
+    ax.set_aspect("equal")
 
     def update(frame):
         data = positions[frame]

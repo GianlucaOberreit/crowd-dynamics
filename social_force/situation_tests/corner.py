@@ -59,7 +59,7 @@ positions = results["positions"]
 # Grab Popcorn #
 ################
 regularised_timesteps = np.linspace(times[0], times[-1], len(times))
-postprocessing.movie.make_movie(times, positions, SF, interval=50, regularised_timesteps=regularised_timesteps, colors='b', title="Lane Formation in a Hallway", x_bound=(0,10), y_bound=(0, 10))
+postprocessing.movie.make_movie(times, positions, SF, interval=50, regularised_timesteps=regularised_timesteps, colors=['b']*n_pedestrians, title="Lane Formation in a Hallway", x_bound=(0,10), y_bound=(0, 10))
 #postprocessing.plotting.plot(positions[-1], SF, title="", x_bound=(0,10), y_bound=(0,10), filetype='pdf')
 
 # Remove the triple quotes to recreate the plot from the report. Commenting out the postprocessing.movie.make_move line can also be useful
